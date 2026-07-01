@@ -1,0 +1,837 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root {
+    --paper: #F6F1E7;
+    --paper-line: #E4DCC8;
+    --ink: #22303F;
+    --ink-soft: #5C6B7A;
+    --present: #3F7D5C;
+    --present-tint: #E4EFE7;
+    --absent: #C0533B;
+    --absent-tint: #F6E7E2;
+    --gold: #D9A441;
+    --card: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  #rc-root {
+    font-family: 'Inter', sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 2.1em;
+    min-height: 100%;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .rc-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 18px 100px;
+  }
+
+  /* ---------- Header ---------- */
+  .rc-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .rc-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .rc-title .rc-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .rc-gear {
+    background: none;
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    color: var(--ink);
+    transition: transform .2s ease, background .2s ease;
+  }
+  .rc-gear:hover { background: var(--card); transform: rotate(25deg); }
+  .rc-gear svg { width: 16px; height: 16px; }
+
+  /* ---------- Date bar ---------- */
+  .rc-datebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0 18px;
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  .rc-dbtn {
+    background: var(--paper);
+    border: none;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .rc-dbtn:hover { background: var(--paper-line); }
+  .rc-dbtn svg { width: 16px; height: 16px; }
+  .rc-datebar input[type="date"] {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    padding: 4px;
+  }
+  .rc-today-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--paper);
+    border: 1px solid var(--paper-line);
+    border-radius: 7px;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+  }
+  .rc-today-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ---------- Summary ---------- */
+  .rc-summary {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .rc-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+  }
+  .rc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .rc-dot.p { background: var(--present); }
+  .rc-dot.a { background: var(--absent); }
+  .rc-dot.u { background: #C9C2B0; }
+
+  /* ---------- Roster instructions ---------- */
+  .rc-hint {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  /* ---------- Grid ---------- */
+  .rc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  @media (min-width: 480px) {
+    .rc-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .rc-tile {
+    position: relative;
+    background: var(--card);
+    border: 1.5px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 14px 10px 16px;
+    cursor: pointer;
+    text-align: center;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color .15s ease, background .15s ease, transform .08s ease;
+  }
+  .rc-tile:active { transform: scale(0.96); }
+
+  .rc-tile .rc-name {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    position: relative;
+    z-index: 2;
+  }
+
+  .rc-tile.present { background: var(--present-tint); border-color: var(--present); }
+  .rc-tile.absent { background: var(--absent-tint); border-color: var(--absent); }
+
+  .rc-stamp {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5) rotate(-18deg);
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 1;
+  }
+  .rc-tile.present .rc-stamp {
+    opacity: 1;
+    transform: scale(1) rotate(10deg);
+    border: 3px double var(--present);
+    color: var(--present);
+    background: var(--present-tint);
+  }
+  .rc-tile.absent .rc-stamp {
+    opacity: 1;
+    transform: scale(1) rotate(-10deg);
+    border: 3px double var(--absent);
+    color: var(--absent);
+    background: var(--absent-tint);
+  }
+  .rc-stamp svg { width: 20px; height: 20px; }
+
+  .rc-tile .rc-status-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    position: relative;
+    z-index: 2;
+  }
+  .rc-tile.present .rc-status-label { color: var(--present); }
+  .rc-tile.absent .rc-status-label { color: var(--absent); }
+
+  /* ---------- Footer bar ---------- */
+  .rc-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--paper-line);
+    padding: 12px 18px;
+    display: flex;
+    gap: 10px;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  .rc-btn {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: opacity .15s ease;
+  }
+  .rc-btn:disabled { opacity: 0.6; cursor: default; }
+  .rc-btn svg { width: 16px; height: 16px; }
+  .rc-btn.primary { background: var(--ink); color: var(--paper); }
+  .rc-btn.primary:hover:not(:disabled) { opacity: 0.88; }
+  .rc-btn.secondary { background: var(--paper); color: var(--ink); border: 1.5px solid var(--paper-line); }
+  .rc-btn.secondary:hover { border-color: var(--ink); }
+
+  /* ---------- Setup screen ---------- */
+  .rc-setup {
+    max-width: 480px;
+    margin: 40px auto;
+    padding: 0 18px;
+  }
+  .rc-setup h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .rc-setup p.rc-sub { color: var(--ink-soft); font-size: 14px; margin: 0 0 26px; line-height: 1.5; }
+  .rc-field { margin-bottom: 18px; }
+  .rc-field label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .rc-field input[type="text"], .rc-field textarea {
+    width: 100%;
+    border: 1.5px solid var(--paper-line);
+    background: var(--card);
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .rc-field textarea { min-height: 200px; resize: vertical; line-height: 1.6; }
+  .rc-field input:focus, .rc-field textarea:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .rc-field .rc-count { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+
+  /* ---------- Modal ---------- */
+  .rc-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(34,48,63,0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+  }
+  @media (min-width: 480px) {
+    .rc-modal-backdrop { align-items: center; }
+  }
+  .rc-modal {
+    background: var(--paper);
+    width: 100%;
+    max-width: 480px;
+    max-height: 82vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+  }
+  @media (min-width: 480px) {
+    .rc-modal { border-radius: 16px; }
+  }
+  .rc-modal h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    margin: 0 0 14px;
+  }
+  .rc-roster-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--paper-line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    margin-bottom: 7px;
+  }
+  .rc-roster-row input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+  }
+  .rc-roster-row input:focus { outline: none; }
+  .rc-remove-btn {
+    background: none;
+    border: none;
+    color: var(--absent);
+    cursor: pointer;
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rc-remove-btn svg { width: 15px; height: 15px; }
+  .rc-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .rc-add-row input {
+    flex: 1;
+    border: 1.5px dashed var(--paper-line);
+    background: transparent;
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+  }
+  .rc-add-row input:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-style: solid; }
+  .rc-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .rc-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+
+  .rc-toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: 9px;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .rc-toast.show { opacity: 1; transform: translateX(-50%) translateY(4px); }
+</style>
+
+<div id="rc-root"></div>
+
+<script>
+(function(){
+  const root = document.getElementById('rc-root');
+  let rosterConfig = null; // { className, students: [{id,name}] }
+  let currentDate = toISODate(new Date());
+  let attendance = {}; // { studentId: 'present'|'absent' }
+  let loading = true;
+  let showEditModal = false;
+  let exporting = false;
+
+  function uid(){
+    return 'stu_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+  }
+
+  // Local-timezone-safe date formatting. toISOString() converts to UTC, which
+  // silently shifts the calendar day for any timezone ahead of UTC — that was
+  // causing the next-day arrow to appear to do nothing.
+  function toISODate(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function todayStr(){ return toISODate(new Date()); }
+
+  function fmtDateLabel(iso){
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function fmtDateShort(iso){
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function shiftDate(iso, days){
+    const d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return toISODate(d);
+  }
+
+  let toastTimer = null;
+  function toast(msg){
+    let el = document.querySelector('.rc-toast');
+    if(!el){
+      el = document.createElement('div');
+      el.className = 'rc-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> el.classList.remove('show'), 2200);
+  }
+
+  async function loadRosterConfig(){
+    try {
+      const res = await window.storage.get('roster-config', true);
+      if(res && res.value){
+        rosterConfig = JSON.parse(res.value);
+      } else {
+        rosterConfig = null;
+      }
+    } catch(e){
+      rosterConfig = null;
+    }
+  }
+
+  async function saveRosterConfig(){
+    try {
+      await window.storage.set('roster-config', JSON.stringify(rosterConfig), true);
+    } catch(e){
+      toast("Couldn't save — check your connection");
+    }
+  }
+
+  async function loadAttendance(date){
+    try {
+      const res = await window.storage.get('attendance:' + date, true);
+      attendance = res && res.value ? JSON.parse(res.value) : {};
+    } catch(e){
+      attendance = {};
+    }
+  }
+
+  async function saveAttendance(){
+    try {
+      await window.storage.set('attendance:' + currentDate, JSON.stringify(attendance), true);
+    } catch(e){
+      toast("Couldn't save that tap — try again");
+    }
+  }
+
+  function icon(name){
+    const icons = {
+      gear: '<path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 005 15a1.65 1.65 0 00-1.51-1H3.5a2 2 0 110-4h.09A1.65 1.65 0 005 8.6a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019 8.6a1.65 1.65 0 001.51 1H20.5a2 2 0 010 4h-.09A1.65 1.65 0 0019 15z"/>',
+      chevLeft: '<path d="M15 18l-6-6 6-6"/>',
+      chevRight: '<path d="M9 18l6-6-6-6"/>',
+      check: '<path d="M20 6L9 17l-5-5"/>',
+      x: '<path d="M18 6L6 18"/><path d="M6 6l12 12"/>',
+      download: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+      trash: '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>'
+    };
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (icons[name]||'') + '</svg>';
+  }
+
+  function cycleStatus(id){
+    const cur = attendance[id];
+    let next;
+    if(!cur) next = 'present';
+    else if(cur === 'present') next = 'absent';
+    else next = null;
+    if(next) attendance[id] = next; else delete attendance[id];
+    saveAttendance();
+    render();
+  }
+
+  function render(){
+    if(loading){
+      root.innerHTML = '<div class="rc-empty">Loading class…</div>';
+      return;
+    }
+    if(!rosterConfig){
+      renderSetup();
+      return;
+    }
+    renderMain();
+    if(showEditModal) renderModal();
+  }
+
+  function renderSetup(){
+    root.innerHTML = `
+      <div class="rc-setup">
+        <span class="rc-eyebrow" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;">First-time setup</span>
+        <h1>Set up your class</h1>
+        <p class="rc-sub">Enter your class name and paste in your student roster — one name per line. You can edit this anytime later.</p>
+        <div class="rc-field">
+          <label>Class name</label>
+          <input type="text" id="rc-classname" placeholder="e.g. Grade 8 — Section B" />
+        </div>
+        <div class="rc-field">
+          <label>Student names (one per line)</label>
+          <textarea id="rc-names" placeholder="Aarav Sharma&#10;Diya Patel&#10;Kabir Singh&#10;..."></textarea>
+          <div class="rc-count" id="rc-count">0 students</div>
+        </div>
+        <button class="rc-btn primary" id="rc-create" style="width:100%;">${icon('check')} Create class</button>
+      </div>
+    `;
+    const ta = document.getElementById('rc-names');
+    const countEl = document.getElementById('rc-count');
+    ta.addEventListener('input', ()=>{
+      const n = ta.value.split('\n').map(s=>s.trim()).filter(Boolean).length;
+      countEl.textContent = n + (n===1 ? ' student' : ' students');
+    });
+    document.getElementById('rc-create').addEventListener('click', async ()=>{
+      const className = document.getElementById('rc-classname').value.trim() || 'My Class';
+      const names = ta.value.split('\n').map(s=>s.trim()).filter(Boolean);
+      if(names.length === 0){ toast('Add at least one student name'); return; }
+      rosterConfig = {
+        className,
+        students: names.map(name => ({ id: uid(), name }))
+      };
+      await saveRosterConfig();
+      await loadAttendance(currentDate);
+      render();
+    });
+  }
+
+  function renderMain(){
+    const students = [...rosterConfig.students].sort((a,b)=>a.name.localeCompare(b.name));
+    const presentCount = students.filter(s=>attendance[s.id]==='present').length;
+    const absentCount = students.filter(s=>attendance[s.id]==='absent').length;
+    const unmarkedCount = students.length - presentCount - absentCount;
+
+    root.innerHTML = `
+      <div class="rc-container">
+        <div class="rc-header">
+          <div class="rc-title">
+            <div>
+              <span class="rc-eyebrow">Roll call</span>
+              ${escapeHtml(rosterConfig.className)}
+            </div>
+          </div>
+          <button class="rc-gear" id="rc-open-edit" title="Edit roster">${icon('gear')}</button>
+        </div>
+
+        <div class="rc-datebar">
+          <button class="rc-dbtn" id="rc-prev-day">${icon('chevLeft')}</button>
+          <input type="date" id="rc-date-input" value="${currentDate}" max="${todayStr()}" />
+          <button class="rc-dbtn" id="rc-next-day">${icon('chevRight')}</button>
+          ${currentDate !== todayStr() ? `<button class="rc-today-btn" id="rc-today">Today</button>` : ''}
+        </div>
+
+        <div class="rc-summary">
+          <span class="rc-pill"><span class="rc-dot p"></span>Present ${presentCount}</span>
+          <span class="rc-pill"><span class="rc-dot a"></span>Absent ${absentCount}</span>
+          <span class="rc-pill"><span class="rc-dot u"></span>Unmarked ${unmarkedCount}</span>
+        </div>
+
+        <p class="rc-hint">Tap a name once for <strong style="color:var(--present)">present</strong>, twice for <strong style="color:var(--absent)">absent</strong>, again to clear.</p>
+
+        ${students.length === 0 ? `<div class="rc-empty">No students yet. Tap the gear icon to add your roster.</div>` : `
+        <div class="rc-grid">
+          ${students.map(s => {
+            const status = attendance[s.id];
+            const cls = status === 'present' ? 'present' : status === 'absent' ? 'absent' : '';
+            const label = status === 'present' ? 'Present' : status === 'absent' ? 'Absent' : 'Tap to mark';
+            const stampIcon = status === 'present' ? icon('check') : status === 'absent' ? icon('x') : '';
+            return `
+              <div class="rc-tile ${cls}" data-id="${s.id}">
+                <div class="rc-stamp">${stampIcon}</div>
+                <div class="rc-name">${escapeHtml(s.name)}</div>
+                <div class="rc-status-label">${label}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        `}
+      </div>
+
+      <div class="rc-footer">
+        <button class="rc-btn secondary" id="rc-edit-roster">${icon('gear')} Edit roster</button>
+        <button class="rc-btn primary" id="rc-export" ${exporting ? 'disabled' : ''}>
+          ${icon('download')} ${exporting ? 'Preparing…' : 'Export to Excel'}
+        </button>
+      </div>
+    `;
+
+    root.querySelectorAll('.rc-tile').forEach(tile=>{
+      tile.addEventListener('click', ()=> cycleStatus(tile.dataset.id));
+    });
+    document.getElementById('rc-open-edit').addEventListener('click', ()=>{ showEditModal = true; render(); });
+    document.getElementById('rc-edit-roster').addEventListener('click', ()=>{ showEditModal = true; render(); });
+    document.getElementById('rc-export').addEventListener('click', exportToExcel);
+    document.getElementById('rc-prev-day').addEventListener('click', ()=> changeDate(shiftDate(currentDate, -1)));
+    document.getElementById('rc-next-day').addEventListener('click', ()=>{
+      const next = shiftDate(currentDate, 1);
+      if(next <= todayStr()) changeDate(next);
+    });
+    document.getElementById('rc-date-input').addEventListener('change', (e)=> changeDate(e.target.value));
+    const todayBtn = document.getElementById('rc-today');
+    if(todayBtn) todayBtn.addEventListener('click', ()=> changeDate(todayStr()));
+  }
+
+  async function changeDate(newDate){
+    currentDate = newDate;
+    loading = true;
+    render();
+    await loadAttendance(currentDate);
+    loading = false;
+    render();
+  }
+
+  function renderModal(){
+    const backdrop = document.createElement('div');
+    backdrop.className = 'rc-modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="rc-modal">
+        <h2>Edit roster</h2>
+        <div class="rc-field" style="margin-bottom:16px;">
+          <label>Class name</label>
+          <input type="text" id="rc-modal-classname" value="${escapeAttr(rosterConfig.className)}" />
+        </div>
+        <label style="display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-bottom:8px;">Students (${rosterConfig.students.length})</label>
+        <div id="rc-roster-list"></div>
+        <div class="rc-add-row">
+          <input type="text" id="rc-new-name" placeholder="Add a student name and press Enter" />
+        </div>
+        <div class="rc-modal-actions">
+          <button class="rc-btn secondary" id="rc-modal-cancel">Cancel</button>
+          <button class="rc-btn primary" id="rc-modal-save">${icon('check')} Save changes</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    const listEl = backdrop.querySelector('#rc-roster-list');
+    let workingStudents = rosterConfig.students.map(s=>({...s}));
+
+    function renderList(){
+      listEl.innerHTML = workingStudents.map(s => `
+        <div class="rc-roster-row" data-id="${s.id}">
+          <input type="text" value="${escapeAttr(s.name)}" />
+          <button class="rc-remove-btn" data-remove="${s.id}">${icon('trash')}</button>
+        </div>
+      `).join('');
+      listEl.querySelectorAll('.rc-roster-row input').forEach(inp=>{
+        inp.addEventListener('input', (e)=>{
+          const id = e.target.closest('.rc-roster-row').dataset.id;
+          const s = workingStudents.find(s=>s.id===id);
+          if(s) s.name = e.target.value;
+        });
+      });
+      listEl.querySelectorAll('[data-remove]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          workingStudents = workingStudents.filter(s=>s.id !== btn.dataset.remove);
+          renderList();
+        });
+      });
+    }
+    renderList();
+
+    const newNameInput = backdrop.querySelector('#rc-new-name');
+    newNameInput.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' && newNameInput.value.trim()){
+        workingStudents.push({ id: uid(), name: newNameInput.value.trim() });
+        newNameInput.value = '';
+        renderList();
+      }
+    });
+
+    backdrop.querySelector('#rc-modal-cancel').addEventListener('click', ()=>{
+      showEditModal = false;
+      backdrop.remove();
+      render();
+    });
+    backdrop.querySelector('#rc-modal-save').addEventListener('click', async ()=>{
+      rosterConfig.className = backdrop.querySelector('#rc-modal-classname').value.trim() || rosterConfig.className;
+      rosterConfig.students = workingStudents.filter(s=>s.name.trim());
+      await saveRosterConfig();
+      showEditModal = false;
+      backdrop.remove();
+      render();
+      toast('Roster updated');
+    });
+  }
+
+  async function exportToExcel(){
+    if(exporting) return;
+    exporting = true;
+    render();
+    try {
+      const listRes = await window.storage.list('attendance:', true);
+      const keys = (listRes && listRes.keys) ? listRes.keys : [];
+      const dates = keys.map(k => k.slice('attendance:'.length)).sort();
+
+      if(dates.length === 0){
+        toast('No attendance recorded yet');
+        exporting = false;
+        render();
+        return;
+      }
+
+      const records = {};
+      for(const d of dates){
+        try {
+          const r = await window.storage.get('attendance:' + d, true);
+          records[d] = r && r.value ? JSON.parse(r.value) : {};
+        } catch(e){
+          records[d] = {};
+        }
+      }
+
+      const students = [...rosterConfig.students].sort((a,b)=>a.name.localeCompare(b.name));
+      const header = ['Student', ...dates.map(fmtDateShort), 'Days Present', 'Total Days', 'Attendance %'];
+      const rows = students.map(s=>{
+        let present = 0;
+        const totalDays = dates.length;
+        const cells = dates.map(d=>{
+          // Any date that appears in storage means roll call was taken that day.
+          // A student with no explicit tap on a taken day counts as Absent, not skipped.
+          const status = records[d][s.id];
+          if(status === 'present'){ present++; return 'P'; }
+          return 'A';
+        });
+        const pct = totalDays ? Math.round((present/totalDays)*100) : '';
+        return [s.name, ...cells, present, totalDays, pct === '' ? '' : pct + '%'];
+      });
+
+      const wsData = [header, ...rows];
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 22 }, ...dates.map(()=>({ wch: 9 })), { wch: 12 }, { wch: 12 }, { wch: 13 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+
+      const safeClassName = (rosterConfig.className || 'Class').replace(/[^a-z0-9]+/gi, '_');
+      XLSX.writeFile(wb, `${safeClassName}_Attendance.xlsx`);
+      toast('Excel file downloaded');
+    } catch(e){
+      console.error(e);
+      toast("Export failed — please try again");
+    } finally {
+      exporting = false;
+      render();
+    }
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+  function escapeAttr(str){
+    return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  async function init(){
+    await loadRosterConfig();
+    if(rosterConfig){
+      await loadAttendance(currentDate);
+    }
+    loading = false;
+    render();
+  }
+
+  init();
+})();
+</script>
